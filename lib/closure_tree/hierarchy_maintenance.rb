@@ -91,8 +91,17 @@ module ClosureTree
         # It shouldn't affect performance of postgresql.
         # See http://dev.mysql.com/doc/refman/5.0/en/subquery-errors.html
         # Also: PostgreSQL doesn't support INNER JOIN on DELETE, so we can't use that.
+        #
+        # Microsoft SQL Server requires WITH (ROWLOCK) because it's default
+        # behavior for deletes is to aquire a table lock (which is not the
+        # default behavior for Postgres or MySQL. Table locks can cause
+        # deadlocks with the table scans of other delete_hierarchy_references
+        # calls)
+        # See: http://msdn.microsoft.com/en-us/library/ms189835.aspx#sectionToggle5
+        db_adapter = ActiveRecord::Base.connection.adapter_name
         _ct.connection.execute <<-SQL.strip_heredoc
           DELETE FROM #{_ct.quoted_hierarchy_table_name}
+          #{"WITH (ROWLOCK)" if db_adapter == "SQLServer"}
           WHERE descendant_id IN (
             SELECT DISTINCT descendant_id
             FROM (SELECT descendant_id
