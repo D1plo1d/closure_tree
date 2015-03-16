@@ -1,7 +1,5 @@
-require 'with_advisory_lock'
-
 module ClosureTree
-  module ActsAsTree
+  module HasClosureTree
     def has_closure_tree(options = {})
       options.assert_valid_keys(
         :parent_column_name,

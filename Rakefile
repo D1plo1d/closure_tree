@@ -12,19 +12,29 @@ YARD::Rake::YardocTask.new do |t|
 end
 
 require "rspec/core/rake_task"
-RSpec::Core::RakeTask.new(:spec)
+RSpec::Core::RakeTask.new(:spec) do |task|
+  task.pattern = 'spec/*_spec.rb'
+end
 
 task :default => :spec
 
-task :all_spec_flavors do
-  [["", ""], ["db_prefix_", ""], ["", "_db_suffix"], ["abc_", "_123"]].each do |prefix, suffix|
-    fail unless system("bundle exec rake spec DB_PREFIX=#{prefix} DB_SUFFIX=#{suffix}")
+namespace :spec do
+  desc 'Run all spec variants'
+  task :all do
+    rake = 'bundle exec rake'
+    fail unless system("#{rake} spec:generators")
+    [['', ''], ['db_prefix_', ''], ['', '_db_suffix'], ['abc_', '_123']].each do |prefix, suffix|
+      env = "DB_PREFIX=#{prefix} DB_SUFFIX=#{suffix}"
+      fail unless system("#{rake} spec #{env}")
+    end
+    require 'active_record/version'
+    if ActiveRecord::VERSION::MAJOR == 3
+      fail unless system("#{rake} spec ATTR_ACCESSIBLE=1")
+    end
   end
-  require 'active_record/version'
-  if ActiveRecord::VERSION::MAJOR == 3
-    fail unless system("rake spec ATTR_ACCESSIBLE=1")
+
+  desc 'Run generator specs'
+  RSpec::Core::RakeTask.new(:generators) do |task|
+    task.pattern = 'spec/generators/*_spec.rb'
   end
 end
-
-# Run the specs using all the different database engines:
-# for DB in sqlite3 mysql postgresql ; do rake ; done
